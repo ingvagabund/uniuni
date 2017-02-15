@@ -21,6 +21,9 @@ class ClusterCapacityPRCI(object):
 		):
 
 		self._dry_run = dry_run
+		if not config:
+			config = "%s/../config.yaml" % getScriptDir(__file__)
+
 		if config_vars:
 			self._config_data = yaml.load(renderTemplate(os.path.dirname(config), os.path.basename(config), config_vars))
 		else:
@@ -63,7 +66,7 @@ class ClusterCapacityPRCI(object):
 
 		log_file_fd = None
 		if "log_file" in self._config_data["general"]:
-			log_file = "%s/%s" % (self._config_data["general"]["results_dir"], self._config_data["general"]["log_file"])
+			log_file = os.path.join(self._config_data["general"]["results_dir"], self._config_data["general"]["log_file"])
 			print "Logs available in %s" % log_file
 			log_file_fd = open(log_file, "w")
 
@@ -91,8 +94,6 @@ class ClusterCapacityPRCI(object):
 		# Run integration tests
 		if self._config_data["tests"]["integration_tests"]["enabled"]:
 			os.environ["KUBE_CONFIG"] = str(self._config_data["kubernetes"]["kubeconfig"])
-			os.environ["KUBE_MASTER_API"] = str(self._config_data["kubernetes"]["kube_master_api"])
-			os.environ["KUBE_MASTER_API_PORT"] = str(self._config_data["kubernetes"]["kube_master_api_port"])
 			try:
 				self._command.run("make integration-tests")
 			except CommandException as e:
@@ -113,8 +114,8 @@ if __name__ == "__main__":
 		"issue_commit": "0b1196ceda140c0c2bff4663a0519fde2ab05a3f",
 		"build_id": 1,
 		"kubeconfig": "/home/jchaloup/Projects/uniuni/kubeconfig",
-		"apiserver_url": "https://10.8.173.142",
-		"apiserver_port": "6443"
+		"results_dir": "/home/jchaloup/Projects/uniuni/artifacts",
+		"cluster_capacity_dir": "/home/jchaloup/Projects/src/github.com/kubernetes-incubator/cluster-capacity",
 	}
-	o = ClusterCapacityPRCI(config="tasks/cluster-capacity/config.yaml", config_vars=config_vars, dry_run=False)
+	o = ClusterCapacityPRCI(config_vars=config_vars, dry_run=False)
 	o.run()

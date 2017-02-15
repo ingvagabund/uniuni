@@ -1,11 +1,9 @@
 ---
 general:
-  cluster_capacity_dir: /home/jchaloup/Projects/src/github.com/kubernetes-incubator/cluster-capacity
-  results_dir: /home/jchaloup/Projects/uniuni/artifacts
-  log_file: "build.log"
+  cluster_capacity_dir: {{ cluster_capacity_dir }}
+  results_dir: {{ results_dir }}
+  log_file: "{{ log_file | default('build.log') }}"
 kubernetes:
-  kube_master_api: {{ apiserver_url }}
-  kube_master_api_port: {{ apiserver_port }}
   kubeconfig: {{ kubeconfig }}
 tests:
   unit_tests:
@@ -13,13 +11,13 @@ tests:
   integration_tests:
     enabled: true
 results_uploader:
-  enabled: true
+  enabled: {{ enabled_results_uploader | default('false') }}
   target: gsbucket
-  boto_config_file: /etc/boto_config
+  boto_config_file: {{ gsutil_config | default('/etc/boto_config') }}
   target_url: gs://cluster-capacity/pr-logs/pull/{{ issue_id }}/cluster-capacity-pull-build-redhat-tests/{{ build_id }}
   internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/cluster-capacity/o/pr-logs/pull/{{ issue_id }}/cluster-capacity-pull-build-redhat-tests/{{ build_id }}
 results_notifier:
-  enabled: true
+  enabled: {{ enabled_results_notifier | default('false') }}
   target: github
   project: kubernetes-incubator/cluster-capacity
   token: /home/jchaloup/Projects/kubernetes-ci/ghtoken.json

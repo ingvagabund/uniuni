@@ -21,12 +21,18 @@ class KubernetesAnsibleDeploymentCI(object):
 	"""
 	def __init__(self,
 			config=None,
+			config_vars=None,
 			dry_run=False
 		):
 
 		self._dry_run = dry_run
-		self._config_data = yaml.load(open(config, 'r'))
-		self._command = Command(dry=self._dry_run, interactive=True)
+		if not config:
+			config = "%s/../config.yaml" % getScriptDir(__file__)
+
+		if config_vars:
+			self._config_data = yaml.load(renderTemplate(os.path.dirname(config), os.path.basename(config), config_vars))
+		else:
+			self._config_data = yaml.load(open(config, 'r'))
 
 	def uploadResults(self):
 		uploader = GSBucketUploader(
@@ -118,6 +124,18 @@ class KubernetesAnsibleDeploymentCI(object):
 		o.deployCluster(self._config_data["deployment"]["openstack"]["ansible"])
 
 	def run(self):
+		# Need a place to put all logs
+		if not os.path.exists(self._config_data["general"]["results_dir"]):
+			os.mkdir(self._config_data["general"]["results_dir"])
+
+		log_file_fd = None
+		if "log_file" in self._config_data["general"]:
+			log_file = os.path.join(self._config_data["general"]["results_dir"], self._config_data["general"]["log_file"])
+			print "Logs available in %s" % log_file
+			log_file_fd = open(log_file, "w")
+
+		self._command = Command(dry=self._dry_run, interactive=True, log_file=log_file_fd)
+
 		# provision Kubernetes cluster via Vagrantfile
 		# from https://github.com/kubernetes/contrib under
 		# ansible/vagrant directory
@@ -143,5 +161,15 @@ class KubernetesAnsibleDeploymentCI(object):
 			self.notifyResults(SUCCESS)
 
 if __name__ == "__main__":
-	o = KubernetesAnsibleDeploymentCI(config="tasks/kubernetes-ansible/config.yaml", dry_run=False)
+	config_vars = {
+		"issue_id": 37,
+		"issue_commit": "0b1196ceda140c0c2bff4663a0519fde2ab05a3f",
+		"build_id": 1,
+		"kubeconfig": "/home/jchaloup/Projects/uniuni/kubeconfig",
+		"results_dir": "/home/jchaloup/Projects/uniuni/artifacts",
+		"ansible_dir": "/home/jchaloup/Projects/src/github.com/kubernetes/contrib/ansible",
+		"resources": "/home/jchaloup/Projects/kubernetes-ci/resources.json",
+		"private_key": "/home/jchaloup/Projects/atomic-ci-jobs/project/config/keys/ci-factory",
+	}
+	o = KubernetesAnsibleDeploymentCI(config_vars=config_vars, dry_run=False)
 	o.run()

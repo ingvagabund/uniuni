@@ -1,7 +1,8 @@
 ---
 general:
-  ansible_dir: /home/jchaloup/Projects/src/github.com/kubernetes/contrib/ansible
-  results_dir: /home/jchaloup/Projects/uniuni/artifacts
+  ansible_dir: {{ ansible_dir }}
+  results_dir: {{ results_dir }}
+  log_file: "{{ log_file | default('build.log') }}"
   kubeconfig_dest_dir: /home/jchaloup/Projects/uniuni
 deployment:
   vagrant:
@@ -20,8 +21,8 @@ deployment:
     # Cluster consists of VMs with the same private key
     enabled: true
     # Only resource file with resources in a pre-defined form is needed
-    resources: /home/jchaloup/Projects/kubernetes-ci/resources.json
-    private_key: /home/jchaloup/Projects/atomic-ci-jobs/project/config/keys/ci-factory
+    resources: {{ resources }}
+    private_key: {{ private_key | default("") }}
     os: rhel
     ansible:
       open_cadvisor_port: true
@@ -35,29 +36,29 @@ deployment:
       docker_source: brew:latest
       fedora_bootstrap: false
 results_uploader:
-  enabled: false
+  enabled: {{ enabled_results_uploader | default('false') }}
   target: gsbucket
-  boto_config_file: /etc/boto_config
-  target_url: gs://cluster-capacity/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID
-  internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/cluster-capacity/o/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID/
+  boto_config_file: {{ gsutil_config | default('/etc/boto_config') }}
+  target_url: gs://kubernetes-contrib-github-redhat/pr-logs/pull/{{ issue_id }}/kubernetes-pull-build-redhat-tests/{{ build_id }}
+  internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/kubernetes-contrib-github-redhat/o/pr-logs/pull/{{ issue_id }}/kubernetes-pull-build-redhat-tests/{{ build_id }}/
 results_notifier:
-  enabled: false
+  enabled: {{ enabled_results_notifier | default('false') }}
   target: github
-  project: kubernetes-incubator/cluster-capacity
+  project: kubernetes/contrib
   token: /home/jchaloup/Projects/kubernetes-ci/ghtoken.json
-  issue: 10
-  sha: 6567cba828630eec48e646fecf9f09e629d42b9f
+  issue: {{ issue_id }}
+  sha: {{ issue_commit }}
   context: bunny
   trigger_phrase: "be nice and run"
-  target_url: https://console.cloud.google.com/storage/browser/cluster-capacity/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID
-  internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/cluster-capacity/o/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID/
+  target_url: https://console.cloud.google.com/storage/browser/kubernetes-contrib-github-redhat/pr-logs/pull/{{ issue_id }}/kubernetes-pull-build-redhat-tests/{{ build_id }}
+  internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/kubernetes-contrib-github-redhat/o/pr-logs/pull/{{ issue_id }}/kubernetes-pull-build-redhat-tests/{{ build_id }}/
   pr_comment:
     enabled: true
-    error_msg: Cluster capacity build/test **errored** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
-    failure_msg: Cluster capacity build/test **failed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
-    success_msg: Cluster capacity build/test **passed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+    error_msg: Cluster capacity build/test **errored** for commit {{ issue_commit }}
+    failure_msg: Cluster capacity build/test **failed** for commit {{ issue_commit }}
+    success_msg: Cluster capacity build/test **passed** for commit {{ issue_commit }}
   pr_status:
     enabled: false
-    error_msg: Cluster capacity build/test **errored** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
-    failure_msg: Cluster capacity build/test **failed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
-    success_msg: Cluster capacity build/test **passed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+    error_msg: Cluster capacity build/test **errored** for commit {{ issue_commit }}
+    failure_msg: Cluster capacity build/test **failed** for commit {{ issue_commit }}
+    success_msg: Cluster capacity build/test **passed** for commit {{ issue_commit }}
