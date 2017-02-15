@@ -1,0 +1,51 @@
+---
+- name: install tar
+  hosts: all
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=tar state=latest"
+
+- name: install yum
+  hosts: all
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=yum state=latest"
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1316452
+- name: update systemd otherwise it conflicts with libselinux
+  hosts: all
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=systemd state=latest"
+
+- name: update selinux-policy-targeted to the latest for firewalld
+  hosts: all
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=selinux-policy-targeted state=latest"
+
+- name: install firewalld
+  hosts: all
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=firewalld state=latest"
+
+- name: start firewalld service
+  hosts: all
+  tasks:
+  - service: name=firewalld state=started
+
+- name: install git on nodes
+  hosts: nodes
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=git state=latest"
+
+- name: install socat on nodes for port forwarding
+  hosts: nodes
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=socat state=latest"
+
+- name: install Volume e2e test dependencies
+  hosts: all
+  tasks:
+  - action: "{{ ansible_pkg_mgr }} name=targetcli state=latest"
+  - action: "{{ ansible_pkg_mgr }} name=ceph state=latest"
+  - action: "{{ ansible_pkg_mgr }} name=glusterfs-fuse state=latest"
+  - action: "{{ ansible_pkg_mgr }} name=iscsi-initiator-utils state=latest"
+  - action: "{{ ansible_pkg_mgr }} name=nfs-utils state=latest"
+

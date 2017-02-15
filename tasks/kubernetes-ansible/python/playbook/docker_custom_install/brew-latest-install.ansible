@@ -1,0 +1,8 @@
+---
+- name: Generic | Install Latest Docker From Brew
+  action: "yum"
+  args:
+    name: docker
+    state: latest
+    disablerepo: rhel7-extras
+    enablerepo: rhel7-extras-build

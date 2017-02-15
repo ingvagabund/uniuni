@@ -1,0 +1,147 @@
+from utils import Command, CommandException
+import yaml
+import os
+# TODO(jchaloup): this needs to be changes to kubernetesci.core.... import
+from core.results.uploader import GSBucketUploader
+from core.results.notifier import GithubNotifier
+from core.errors import TestStatus, ERROR, FAILURE, SUCCESS
+import logging
+from helpers import RedHatKubernetesAnsibleDeployment
+
+# Requirements:
+# - kubernetes ansible + Vagrantfile
+# - ANSIBLE_EXTRA_VARS (optional)
+#
+
+class KubernetesAnsibleDeploymentCI(object):
+
+	"""Deploy kubernetes cluster via Vagrantfile or over a cluster
+	param ansible_dir: directory with ansible playbooks and Vagrantfile for Kubernetes deployment
+	type  ansible_dir: directory
+	"""
+	def __init__(self,
+			config=None,
+			dry_run=False
+		):
+
+		self._dry_run = dry_run
+		self._config_data = yaml.load(open(config, 'r'))
+		self._command = Command(dry=self._dry_run, interactive=True)
+
+	def uploadResults(self):
+		uploader = GSBucketUploader(
+			self._config_data["general"]["results_dir"],
+			self._config_data["results_uploader"]["target_url"],
+			self._config_data["results_uploader"]["internal_target_url"],
+			self._config_data["results_uploader"]["boto_config_file"],
+			dry=self._dry_run
+		)
+		try:
+			uploader.upload()
+		except CommandException as e:
+			logging.error("Unable to upload results: %s" % e)
+
+	def notifyResults(self, status):
+		n = GithubNotifier(
+			self._config_data["results_notifier"]["project"],
+			self._config_data["results_notifier"]["issue"],
+			self._config_data["results_notifier"]["sha"],
+			self._config_data["results_notifier"]["context"],
+			self._config_data["results_notifier"]["token"],
+			self._config_data["results_notifier"]["target_url"],
+			self._config_data["results_notifier"]["trigger_phrase"]
+		)
+		n.registerStatus(ERROR, self._config_data["results_notifier"]["pr_status"]["error_msg"], self._config_data["results_notifier"]["pr_comment"]["error_msg"])
+		n.registerStatus(FAILURE, self._config_data["results_notifier"]["pr_status"]["failure_msg"], self._config_data["results_notifier"]["pr_comment"]["failure_msg"])
+		n.registerStatus(SUCCESS, self._config_data["results_notifier"]["pr_status"]["success_msg"], self._config_data["results_notifier"]["pr_comment"]["success_msg"])
+
+		n.notify(status=status, update_pr_status=self._config_data["results_notifier"]["pr_status"]["enabled"], comment_pr=self._config_data["results_notifier"]["pr_comment"]["enabled"])
+
+
+	def runVagrantDeployment(self):
+		# It is expected the ansible directory is completely set up and ready for use.
+		# If needed, ANSIBLE_EXTRA_VARS can be used to set extra vars to set or override existing ansible variables.
+		os.chdir("%s/vagrant" % self._config_data["general"]["ansible_dir"])
+
+		# construct ansible extra vars
+		if self._config_data["deployment"]["vagrant"]["ansible"] != None:
+			pairs = []
+			for key in self._config_data["deployment"]["vagrant"]["ansible"]:
+				pairs.append("%s=%s" % (key, self._config_data["deployment"]["vagrant"]["ansible"][key]))
+			os.environ["ANSIBLE_EXTRA_VARS"] = " ".join(pairs)
+			print "ANSIBLE_EXTRA_VARS=\"%s\"" % os.environ["ANSIBLE_EXTRA_VARS"]
+
+		# set image, number of nodes
+		if self._config_data["deployment"]["vagrant"] != None:
+			for key in self._config_data["deployment"]["vagrant"]:
+				os.environ[ key.upper() ] = str(self._config_data["deployment"]["vagrant"][key])
+				print "%s=\"%s\"" % (key.upper(), os.environ[ key.upper() ])
+
+		# It is expected Vagrant technology is completely set up and ready for use.
+		# If needed, OS_IMAGE and other envs can be set to alter provisioning.
+		self._command.run("vagrant up")
+
+		# collect kubeconfig from master node
+		ssh_command = Command(dry=self._dry_run).run("sudo vagrant ssh-config")
+		if ssh_command.rc() > 0:
+			logging.error("Unable to retrieve vagrant ssh-config: %s" % ssh_command.err())
+			exit(1)
+
+		lines = ssh_command.out().split("\n")
+
+		master_line = True
+		vagrant_master_ip = ""
+		for line in lines:
+			if line.startswith("Host kube-master-1"):
+				master_line=True
+				continue
+
+			if master_line and line.startswith("  HostName "):
+				vagrant_master_ip = line.split("  HostName ")[1].strip()
+				print vagrant_master_ip
+				break
+
+			if line == "":
+				master_line=False
+
+		self._command.run("scp -i ~/.vagrant.d/insecure_private_key -o StrictHostKeyChecking=no vagrant@%s:/etc/kubernetes/kubectl.kubeconfig %s/kubeconfig" % (vagrant_master_ip, self._config_data["general"]["kubeconfig_dest_dir"]))
+
+	def runOpenstackDeployment(self):
+		o = RedHatKubernetesAnsibleDeployment(
+				self._config_data["general"]["ansible_dir"],
+				self._config_data["deployment"]["openstack"]["resources"],
+				self._config_data["deployment"]["openstack"]["os"],
+				self._config_data["general"]["kubeconfig_dest_dir"],
+				self._config_data["deployment"]["openstack"]["private_key"],
+				dry=self._dry_run
+			)
+		o.deployCluster(self._config_data["deployment"]["openstack"]["ansible"])
+
+	def run(self):
+		# provision Kubernetes cluster via Vagrantfile
+		# from https://github.com/kubernetes/contrib under
+		# ansible/vagrant directory
+
+		# Need a place to put all logs
+		if not os.path.exists(self._config_data["general"]["results_dir"]):
+			os.mkdir(self._config_data["general"]["results_dir"])
+
+		if self._config_data["deployment"]["vagrant"]["enabled"]:
+			self.runVagrantDeployment()
+		elif self._config_data["deployment"]["openstack"]["enabled"]:
+			self.runOpenstackDeployment()
+
+		# collect logs
+		os.chdir(self._config_data["general"]["results_dir"])
+
+		# upload logs to GS Bucket
+		if self._config_data["results_uploader"]["enabled"]:
+			self.uploadResults()
+
+		# comment GH PR
+		if self._config_data["results_notifier"]["enabled"]:
+			self.notifyResults(SUCCESS)
+
+if __name__ == "__main__":
+	o = KubernetesAnsibleDeploymentCI(config="tasks/kubernetes-ansible/config.yaml", dry_run=False)
+	o.run()

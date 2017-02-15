@@ -1,0 +1,63 @@
+---
+general:
+  ansible_dir: /home/jchaloup/Projects/src/github.com/kubernetes/contrib/ansible
+  results_dir: /home/jchaloup/Projects/uniuni/artifacts
+  kubeconfig_dest_dir: /home/jchaloup/Projects/uniuni
+deployment:
+  vagrant:
+    # Vagrantfile based deployment
+    # Cluster consists of Vagrantboxes provisioned on a localhost
+    enabled: false
+    # fedora, not Fedora
+    os_image: fedora
+    num_nodes: 2
+    ansible:
+      kube_source_type: github-release
+      kube_master_api_port: 6443
+      kube_version: 1.4.8
+  openstack:
+    # OpenStack based deployment
+    # Cluster consists of VMs with the same private key
+    enabled: true
+    # Only resource file with resources in a pre-defined form is needed
+    resources: /home/jchaloup/Projects/kubernetes-ci/resources.json
+    private_key: /home/jchaloup/Projects/atomic-ci-jobs/project/config/keys/ci-factory
+    os: rhel
+    ansible:
+      open_cadvisor_port: true
+      flannel_subnet: 10.253.0.0
+      flannel_prefix: 16
+      source_type: localBuild
+      kube_master_api_port: 6443
+      kube_cert_ip: _use_aws_external_ip_
+      localBuildOutput: ../../../kubernetes/_output/local/go/bin
+      kube_api_address: 0.0.0.0
+      docker_source: brew:latest
+      fedora_bootstrap: false
+results_uploader:
+  enabled: false
+  target: gsbucket
+  boto_config_file: /etc/boto_config
+  target_url: gs://cluster-capacity/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID
+  internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/cluster-capacity/o/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID/
+results_notifier:
+  enabled: false
+  target: github
+  project: kubernetes-incubator/cluster-capacity
+  token: /home/jchaloup/Projects/kubernetes-ci/ghtoken.json
+  issue: 10
+  sha: 6567cba828630eec48e646fecf9f09e629d42b9f
+  context: bunny
+  trigger_phrase: "be nice and run"
+  target_url: https://console.cloud.google.com/storage/browser/cluster-capacity/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID
+  internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/cluster-capacity/o/pr-logs/pull/PULLID/cluster-capacity-pull-build-redhat-tests/BUILDID/
+  pr_comment:
+    enabled: true
+    error_msg: Cluster capacity build/test **errored** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+    failure_msg: Cluster capacity build/test **failed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+    success_msg: Cluster capacity build/test **passed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+  pr_status:
+    enabled: false
+    error_msg: Cluster capacity build/test **errored** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+    failure_msg: Cluster capacity build/test **failed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
+    success_msg: Cluster capacity build/test **passed** for commit 6567cba828630eec48e646fecf9f09e629d42b9f
