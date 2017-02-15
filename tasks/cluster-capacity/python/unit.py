@@ -2,7 +2,7 @@ import yaml
 import os
 import logging
 
-from utils import Command, CommandException, renderTemplate
+from utils import Command, CommandException, getScriptDir, renderTemplate
 # TODO(jchaloup): this needs to be changes to kubernetesci.core.... import
 from core.results.uploader import GSBucketUploader
 from core.results.notifier import GithubNotifier
@@ -72,6 +72,13 @@ class ClusterCapacityPRCI(object):
 
 		self._command = Command(dry=self._dry_run, interactive=True, log_file=log_file_fd)
 
+		# install deps
+		self._command.run("yum install -y python-pip python-devel gcc openssl-devel python-devel python-setuptools libffi-devel redhat-rpm-config")
+		self._command.run("pip install --upgrade pip")
+		# TODO(jchaloup): this needs to be fixed in Fedora (or install pip from Fedora?)
+		self._command.run("pip install --upgrade 'setuptools<=32.1.2'")
+		self._command.run("pip install gsutil")
+
 		os.chdir(self._config_data["general"]["cluster_capacity_dir"])
 
 		ts = TestStatus()
@@ -116,6 +123,7 @@ if __name__ == "__main__":
 		"kubeconfig": "/home/jchaloup/Projects/uniuni/kubeconfig",
 		"results_dir": "/home/jchaloup/Projects/uniuni/artifacts",
 		"cluster_capacity_dir": "/home/jchaloup/Projects/src/github.com/kubernetes-incubator/cluster-capacity",
+		"ghtoken": "/home/jchaloup/Projects/kubernetes-ci/ghtoken.json"
 	}
 	o = ClusterCapacityPRCI(config_vars=config_vars, dry_run=False)
 	o.run()

@@ -20,7 +20,7 @@ results_notifier:
   enabled: {{ enabled_results_notifier | default('false') }}
   target: github
   project: kubernetes-incubator/cluster-capacity
-  token: /home/jchaloup/Projects/kubernetes-ci/ghtoken.json
+  token: {{ ghtoken }}
   issue: {{ issue_id }}
   sha: {{ issue_commit }}
   context: bunny

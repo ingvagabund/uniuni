@@ -4,13 +4,13 @@ import os
 
 class RedHatKubernetesAnsibleDeployment(object):
 
-	def __init__(self, ansible_dir, resource_file, cluster_os, kubeconfig_dest_dir, private_key=None, log_file=None, dry=False):
+	def __init__(self, ansible_dir, resource_file, cluster_os, kubeconfig_dest, private_key=None, log_file=None, dry=False):
 
 		self._dry = dry
 		self._class_dir = getScriptDir(__file__)
 		self._ansible_dir = ansible_dir
 		self._resource_file = resource_file
-		self._kubeconfig_dest_dir = kubeconfig_dest_dir
+		self._kubeconfig_dest = kubeconfig_dest
 		self._log_file = log_file
 		self._private_key = private_key
 		self._cluster_os = cluster_os
@@ -141,6 +141,6 @@ class RedHatKubernetesAnsibleDeployment(object):
 		c.run("echo \"Retrieve kubeconfig from the master...\"")
 		# must be set to n, otherwise fetch fails (don't know why)
 		os.environ["ANSIBLE_SCP_IF_SSH"] = "n"
-		c.run("ansible-playbook -i %s %s/kube_github_preload/kubeconfig.yml --extra-vars=\"workspace=%s\"" % (self._inventory, self._playbooks_dir, self._kubeconfig_dest_dir), error="kubernetes cluster playbook failed")
+		c.run("ansible-playbook -i %s %s/kube_github_preload/kubeconfig.yml --extra-vars=\"kubeconfig_dest=%s\"" % (self._inventory, self._playbooks_dir, self._kubeconfig_dest), error="kubernetes cluster playbook failed")
 
 		os.chdir(backdir)

@@ -3,7 +3,7 @@ general:
   ansible_dir: {{ ansible_dir }}
   results_dir: {{ results_dir }}
   log_file: "{{ log_file | default('build.log') }}"
-  kubeconfig_dest_dir: /home/jchaloup/Projects/uniuni
+  kubeconfig_dest_dir: {{ kubeconfig }}
 deployment:
   vagrant:
     # Vagrantfile based deployment

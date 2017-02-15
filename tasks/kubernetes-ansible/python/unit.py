@@ -1,4 +1,4 @@
-from utils import Command, CommandException
+from utils import Command, CommandException, getScriptDir, renderTemplate
 import yaml
 import os
 # TODO(jchaloup): this needs to be changes to kubernetesci.core.... import
@@ -46,6 +46,9 @@ class KubernetesAnsibleDeploymentCI(object):
 			uploader.upload()
 		except CommandException as e:
 			logging.error("Unable to upload results: %s" % e)
+			return False
+
+		return True
 
 	def notifyResults(self, status):
 		n = GithubNotifier(
@@ -144,10 +147,14 @@ class KubernetesAnsibleDeploymentCI(object):
 		if not os.path.exists(self._config_data["general"]["results_dir"]):
 			os.mkdir(self._config_data["general"]["results_dir"])
 
-		if self._config_data["deployment"]["vagrant"]["enabled"]:
-			self.runVagrantDeployment()
-		elif self._config_data["deployment"]["openstack"]["enabled"]:
-			self.runOpenstackDeployment()
+		try:
+			if self._config_data["deployment"]["vagrant"]["enabled"]:
+				self.runVagrantDeployment()
+			elif self._config_data["deployment"]["openstack"]["enabled"]:
+				self.runOpenstackDeployment()
+		except CommandException as e:
+			logging.error("Unable to deploy cluster: %s" % e)
+			return False
 
 		# collect logs
 		os.chdir(self._config_data["general"]["results_dir"])
