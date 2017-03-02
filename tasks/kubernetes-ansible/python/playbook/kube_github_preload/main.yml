@@ -40,12 +40,12 @@
   tasks:
   - action: "{{ ansible_pkg_mgr }} name=socat state=latest"
 
-- name: install Volume e2e test dependencies
-  hosts: all
-  tasks:
-  - action: "{{ ansible_pkg_mgr }} name=targetcli state=latest"
-  - action: "{{ ansible_pkg_mgr }} name=ceph state=latest"
-  - action: "{{ ansible_pkg_mgr }} name=glusterfs-fuse state=latest"
-  - action: "{{ ansible_pkg_mgr }} name=iscsi-initiator-utils state=latest"
-  - action: "{{ ansible_pkg_mgr }} name=nfs-utils state=latest"
+#- name: install Volume e2e test dependencies
+#  hosts: all
+#  tasks:
+#  - action: "{{ ansible_pkg_mgr }} name=targetcli state=latest"
+#  - action: "{{ ansible_pkg_mgr }} name=ceph state=latest"
+#  - action: "{{ ansible_pkg_mgr }} name=glusterfs-fuse state=latest"
+#  - action: "{{ ansible_pkg_mgr }} name=iscsi-initiator-utils state=latest"
+#  - action: "{{ ansible_pkg_mgr }} name=nfs-utils state=latest"
 

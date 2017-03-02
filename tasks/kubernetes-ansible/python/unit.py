@@ -42,13 +42,8 @@ class KubernetesAnsibleDeploymentCI(object):
 			self._config_data["results_uploader"]["boto_config_file"],
 			dry=self._dry_run
 		)
-		try:
-			uploader.upload()
-		except CommandException as e:
-			logging.error("Unable to upload results: %s" % e)
-			return False
 
-		return True
+		uploader.upload()
 
 	def notifyResults(self, status):
 		n = GithubNotifier(
@@ -113,7 +108,7 @@ class KubernetesAnsibleDeploymentCI(object):
 			if line == "":
 				master_line=False
 
-		self._command.run("scp -i ~/.vagrant.d/insecure_private_key -o StrictHostKeyChecking=no vagrant@%s:/etc/kubernetes/kubectl.kubeconfig %s/kubeconfig" % (vagrant_master_ip, self._config_data["general"]["kubeconfig_dest_dir"]))
+		self._command.run("scp -i ~/.vagrant.d/insecure_private_key -o StrictHostKeyChecking=no vagrant@%s:/etc/kubernetes/kubectl.kubeconfig %s" % (vagrant_master_ip, self._config_data["general"]["kubeconfig_dest_dir"]))
 
 	def runOpenstackDeployment(self):
 		o = RedHatKubernetesAnsibleDeployment(
@@ -147,25 +142,36 @@ class KubernetesAnsibleDeploymentCI(object):
 		if not os.path.exists(self._config_data["general"]["results_dir"]):
 			os.mkdir(self._config_data["general"]["results_dir"])
 
-		try:
-			if self._config_data["deployment"]["vagrant"]["enabled"]:
-				self.runVagrantDeployment()
-			elif self._config_data["deployment"]["openstack"]["enabled"]:
-				self.runOpenstackDeployment()
-		except CommandException as e:
-			logging.error("Unable to deploy cluster: %s" % e)
-			return False
+		if self._config_data["deployment"]["vagrant"]["enabled"]:
+			self.runVagrantDeployment()
+		elif self._config_data["deployment"]["openstack"]["enabled"]:
+			self.runOpenstackDeployment()
 
 		# collect logs
 		os.chdir(self._config_data["general"]["results_dir"])
 
 		# upload logs to GS Bucket
-		if self._config_data["results_uploader"]["enabled"]:
+		if self._config_data["results_uploader"]["enabled"] and not self._config_data["results_uploader"]["skip_success"]:
 			self.uploadResults()
 
 		# comment GH PR
-		if self._config_data["results_notifier"]["enabled"]:
+		if self._config_data["results_notifier"]["enabled"] and not self._config_data["results_notifier"]["skip_success"]:
 			self.notifyResults(SUCCESS)
+
+	def checked_run(self):
+		"""Make sure any exception is catch and a PR is notified
+		"""
+		try:
+			self.run()
+		except:
+			# upload logs to GS Bucket
+			if self._config_data["results_uploader"]["enabled"]:
+				self.uploadResults()
+
+			# comment GH PR
+			if self._config_data["results_notifier"]["enabled"]:
+				self.notifyResults(FAILURE)
+
 
 if __name__ == "__main__":
 	config_vars = {
@@ -175,7 +181,7 @@ if __name__ == "__main__":
 		"kubeconfig": "/home/jchaloup/Projects/uniuni/kubeconfig",
 		"results_dir": "/home/jchaloup/Projects/uniuni/artifacts",
 		"ansible_dir": "/home/jchaloup/Projects/src/github.com/kubernetes/contrib/ansible",
-		"resources": "/home/jchaloup/Projects/kubernetes-ci/resources.json",
+		"resources": "/home/jchaloup/Projects/uniuni/resources.json",
 		"private_key": "/home/jchaloup/Projects/atomic-ci-jobs/project/config/keys/ci-factory",
 	}
 	o = KubernetesAnsibleDeploymentCI(config_vars=config_vars, dry_run=False)

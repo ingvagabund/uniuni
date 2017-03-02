@@ -37,12 +37,14 @@ deployment:
       fedora_bootstrap: false
 results_uploader:
   enabled: {{ enabled_results_uploader | default('false') }}
+  skip_success: {{ results_uploader_skip_sucess | default('false') }}
   target: gsbucket
   boto_config_file: {{ gsutil_config | default('/etc/boto_config') }}
   target_url: gs://kubernetes-contrib-github-redhat/pr-logs/pull/{{ issue_id }}/kubernetes-pull-build-redhat-tests/{{ build_id }}
   internal_target_url: https://console.cloud.google.com/m/cloudstorage/b/kubernetes-contrib-github-redhat/o/pr-logs/pull/{{ issue_id }}/kubernetes-pull-build-redhat-tests/{{ build_id }}/
 results_notifier:
   enabled: {{ enabled_results_notifier | default('false') }}
+  skip_success: {{ results_notifier_skip_sucess | default('false') }}
   target: github
   project: kubernetes/contrib
   token: /home/jchaloup/Projects/kubernetes-ci/ghtoken.json

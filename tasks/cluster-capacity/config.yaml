@@ -7,9 +7,9 @@ kubernetes:
   kubeconfig: {{ kubeconfig }}
 tests:
   unit_tests:
-    enabled: true
+    enabled: {{ enable_unit_tests | default('false') }}
   integration_tests:
-    enabled: true
+    enabled: {{ enable_integration_tests | default('false') }}
 results_uploader:
   enabled: {{ enabled_results_uploader | default('false') }}
   target: gsbucket

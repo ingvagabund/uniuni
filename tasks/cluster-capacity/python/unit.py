@@ -115,6 +115,20 @@ class ClusterCapacityPRCI(object):
 		if self._config_data["results_notifier"]["enabled"]:
 			self.notifyResults(ts.status())
 
+	def checked_run(self):
+		"""Make sure any exception is catch and a PR is notified
+		"""
+		try:
+			self.run()
+		except:
+			# upload logs to GS Bucket
+			if self._config_data["results_uploader"]["enabled"]:
+				self.uploadResults()
+
+			# comment GH PR
+			if self._config_data["results_notifier"]["enabled"]:
+				self.notifyResults(FAILURE)
+
 if __name__ == "__main__":
 	config_vars = {
 		"issue_id": 37,
@@ -123,7 +137,8 @@ if __name__ == "__main__":
 		"kubeconfig": "/home/jchaloup/Projects/uniuni/kubeconfig",
 		"results_dir": "/home/jchaloup/Projects/uniuni/artifacts",
 		"cluster_capacity_dir": "/home/jchaloup/Projects/src/github.com/kubernetes-incubator/cluster-capacity",
-		"ghtoken": "/home/jchaloup/Projects/kubernetes-ci/ghtoken.json"
+		"ghtoken": "/home/jchaloup/Projects/kubernetes-ci/ghtoken.json",
+		"enable_integration_tests": True
 	}
 	o = ClusterCapacityPRCI(config_vars=config_vars, dry_run=False)
 	o.run()
